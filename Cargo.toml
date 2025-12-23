@@ -1,0 +1,42 @@
+[package]
+name = "sphero-rvr"
+version = "0.1.0"
+edition = "2021"
+authors = ["Tim Boldt <timboldt@users.noreply.github.com>"]
+description = "Rust library for controlling Sphero RVR robots via UART"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/timboldt/sphero-rvr-rs"
+readme = "README.md"
+keywords = ["sphero", "rvr", "robotics", "uart", "serial"]
+categories = ["embedded", "hardware-support"]
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.41", features = ["full"] }
+
+# Serial communication
+tokio-serial = "5.4"
+
+# Error handling
+thiserror = "2.0"
+
+# Serialization (for protocol)
+bytes = "1.9"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+# Testing utilities
+tokio-test = "0.4"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true  # Reduce binary size for embedded deployment
+
+[[example]]
+name = "basic_connection"
+path = "examples/basic_connection.rs"

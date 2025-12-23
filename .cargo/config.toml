@@ -1,0 +1,19 @@
+# Cross-compilation configuration for Raspberry Pi 3B+
+[target.armv7-unknown-linux-gnueabihf]
+linker = "arm-linux-gnueabihf-gcc"
+
+# Optional: Pre-configure as default target to avoid --target flag
+# [build]
+# target = "armv7-unknown-linux-gnueabihf"
+
+# Strip symbols for smaller binaries
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+opt-level = 3
+
+# Faster compile times during development
+[profile.dev]
+opt-level = 0
+debug = true
