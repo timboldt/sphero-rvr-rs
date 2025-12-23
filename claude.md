@@ -71,20 +71,20 @@ Based on Sphero SDK documentation:
 
 ### Cross-Compilation Setup
 
-**Target**: armv7-unknown-linux-gnueabihf (Raspberry Pi 3B+)
+**Target**: aarch64-unknown-linux-gnu (Raspberry Pi 64-bit)
 
 **Requirements:**
-1. Install target: `rustup target add armv7-unknown-linux-gnueabihf`
-2. Install ARM toolchain: `sudo apt install gcc-arm-linux-gnueabihf`
+1. Install target: `rustup target add aarch64-unknown-linux-gnu`
+2. Install ARM toolchain: `sudo apt install gcc-aarch64-linux-gnu`
 3. Configure linker in `.cargo/config.toml`
 
 **Build Commands:**
 ```bash
 # Debug build
-cargo build --target=armv7-unknown-linux-gnueabihf --example basic_connection
+cargo build --target=aarch64-unknown-linux-gnu --example basic_connection
 
 # Release build
-cargo build --target=armv7-unknown-linux-gnueabihf --release --example basic_connection
+cargo build --target=aarch64-unknown-linux-gnu --release --example basic_connection
 ```
 
 **Deployment:**
@@ -100,7 +100,7 @@ cargo build --target=armv7-unknown-linux-gnueabihf --release --example basic_con
 
 1. **Write code** on development machine
 2. **Test** with unit tests: `cargo test`
-3. **Build** for ARM: `cargo build --target=armv7-unknown-linux-gnueabihf`
+3. **Build** for ARM: `cargo build --target=aarch64-unknown-linux-gnu`
 4. **Deploy** to Pi: `./deploy.sh --example basic_connection`
 5. **Test** on hardware via SSH
 

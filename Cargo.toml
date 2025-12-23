@@ -2,7 +2,7 @@
 name = "sphero-rvr"
 version = "0.1.0"
 edition = "2021"
-authors = ["Tim Boldt <timboldt@users.noreply.github.com>"]
+authors = ["Tim Boldt"]
 description = "Rust library for controlling Sphero RVR robots via UART"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/timboldt/sphero-rvr-rs"

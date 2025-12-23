@@ -21,7 +21,7 @@ PI_USER="${PI_USER:-pi}"
 EXAMPLE="basic_connection"
 RUN_AFTER_DEPLOY=false
 BUILD_MODE="debug"
-TARGET="armv7-unknown-linux-gnueabihf"
+TARGET="aarch64-unknown-linux-gnu"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do

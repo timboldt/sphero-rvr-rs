@@ -38,8 +38,8 @@ Stage 1 provides the foundational infrastructure:
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # Install ARM cross-compilation toolchain
-rustup target add armv7-unknown-linux-gnueabihf
-sudo apt install gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
+rustup target add aarch64-unknown-linux-gnu
+sudo apt install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 ```
 
 **Raspberry Pi:**
@@ -62,10 +62,10 @@ sudo apt install gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
 cargo build --example basic_connection
 
 # Cross-compile for Raspberry Pi
-cargo build --target=armv7-unknown-linux-gnueabihf --example basic_connection
+cargo build --target=aarch64-unknown-linux-gnu --example basic_connection
 
 # Build optimized release version
-cargo build --target=armv7-unknown-linux-gnueabihf --release --example basic_connection
+cargo build --target=aarch64-unknown-linux-gnu --release --example basic_connection
 ```
 
 ### Deploying to Raspberry Pi
