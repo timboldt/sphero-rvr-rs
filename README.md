@@ -10,23 +10,28 @@ Rust library for controlling Sphero RVR robots via UART serial communication fro
 - **Protocol abstraction** - clean high-level API hiding protocol details
 - **Comprehensive error handling** with domain-specific error types
 
-## Current Status: Stage 1 (Baseline Setup)
+## Current Status: Stage 2 (LED Control & Status Queries) ✅
 
-Stage 1 provides the foundational infrastructure:
+**Stage 1 (Complete):**
 - ✅ Complete project structure and build configuration
 - ✅ Protocol layer (packet encoding, SLIP encoding, checksums)
 - ✅ Connection management
 - ✅ Cross-compilation and deployment automation
 - ✅ Basic connection example
 
-**Coming in Stage 2:**
-- LED control commands
-- Status information queries
-- Hardware testing
+**Stage 2 (Complete):**
+- ✅ LED control commands (`set_all_leds`)
+- ✅ Battery status queries (`get_battery_percentage`, `get_battery_voltage_state`)
+- ✅ Power management (`wake`, `sleep`)
+- ✅ Command/response handling
+- ✅ Example programs for all features
+- ⏳ Hardware testing (pending physical RVR access)
 
 **Coming in Stage 3:**
 - Complete Sphero RVR API implementation
-- Sensor data, motor control, etc.
+- Motor control and driving
+- Sensor data streaming
+- Advanced features
 
 ## Quick Start
 
@@ -59,35 +64,50 @@ sudo apt install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
 ```bash
 # Build for development machine (won't run on Pi)
-cargo build --example basic_connection
+cargo build --example led_control
 
 # Cross-compile for Raspberry Pi
-cargo build --target=aarch64-unknown-linux-gnu --example basic_connection
+cargo build --target=aarch64-unknown-linux-gnu --example led_control
 
 # Build optimized release version
-cargo build --target=aarch64-unknown-linux-gnu --release --example basic_connection
+cargo build --target=aarch64-unknown-linux-gnu --release --example led_control
+
+# Build all examples
+cargo build --target=aarch64-unknown-linux-gnu --examples
 ```
 
 ### Deploying to Raspberry Pi
 
 ```bash
-# Deploy example to Pi
-./deploy.sh --example basic_connection
+# Deploy LED control example and run
+./deploy.sh --example led_control --run
 
-# Deploy and run immediately
-./deploy.sh --example basic_connection --run
+# Deploy battery status example
+./deploy.sh --example battery_status --run
+
+# Deploy power management example
+./deploy.sh --example power_management --run
 
 # Deploy to custom Pi host
-./deploy.sh --pi-host 192.168.1.100 --pi-user pi --example basic_connection
+./deploy.sh --pi-host 192.168.1.100 --pi-user pi --example led_control
 
-# Deploy release build
-./deploy.sh --release --example basic_connection
+# Deploy release build (optimized, smaller binary)
+./deploy.sh --release --example led_control --run
 ```
+
+### Available Examples
+
+- **`basic_connection`** - Simple connection test (Stage 1)
+- **`led_control`** - LED color cycling demo (Stage 2)
+- **`battery_status`** - Battery monitoring (Stage 2)
+- **`power_management`** - Wake/sleep commands (Stage 2)
 
 ### Usage Example
 
 ```rust
 use sphero_rvr::{RvrConnection, RvrConfig};
+use std::time::Duration;
+use tokio::time::sleep;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -97,9 +117,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Open connection to RVR
     let mut rvr = RvrConnection::open("/dev/serial0", config).await?;
 
-    // Stage 2 will add commands like:
-    // rvr.set_led_color(255, 0, 0).await?;
-    // let battery = rvr.get_battery_percentage().await?;
+    // Set all LEDs to red
+    rvr.set_all_leds(255, 0, 0).await?;
+    sleep(Duration::from_secs(1)).await;
+
+    // Get battery status
+    let battery = rvr.get_battery_percentage().await?;
+    println!("Battery: {}%", battery);
+
+    // Get voltage state (0=Unknown, 1=OK, 2=Low, 3=Critical)
+    let state = rvr.get_battery_voltage_state().await?;
+    println!("Voltage state: {}", state);
+
+    // Wake/sleep commands
+    rvr.wake().await?;
+    rvr.sleep().await?;
 
     // Close connection
     rvr.close().await?;

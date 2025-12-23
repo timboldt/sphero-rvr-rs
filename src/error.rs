@@ -21,8 +21,8 @@ pub enum RvrError {
     #[error("Invalid response: {0}")]
     InvalidResponse(String),
 
-    #[error("Command failed with error code: {0:#04x}")]
-    CommandFailed(u8),
+    #[error("Command failed: {0}")]
+    CommandFailed(String),
 }
 
 /// Convenience Result type

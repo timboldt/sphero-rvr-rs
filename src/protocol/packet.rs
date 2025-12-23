@@ -83,10 +83,90 @@ impl Packet {
         }
     }
 
-    // Stage 2 will add:
-    // - to_bytes() for serialization
-    // - from_bytes() for deserialization
-    // - Validation methods
+    /// Serialize packet to bytes for transmission
+    /// Format: [FLAGS] [TARGET_ID?] [SOURCE_ID?] [DEVICE_ID] [COMMAND_ID] [SEQ] [PAYLOAD...]
+    /// Note: SOP, checksum, and EOP are added by the encoding layer
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = Vec::new();
+
+        // Flags byte
+        bytes.push(self.flags.to_byte());
+
+        // Optional target ID
+        if self.flags.has_target_id {
+            bytes.push(self.target_id.unwrap_or(0x01)); // Default to 1 for Nordic target
+        }
+
+        // Optional source ID
+        if self.flags.has_source_id {
+            bytes.push(self.source_id.unwrap_or(0x01));
+        }
+
+        // Core fields
+        bytes.push(self.device_id);
+        bytes.push(self.command_id);
+        bytes.push(self.sequence_number);
+
+        // Payload
+        bytes.extend_from_slice(&self.payload);
+
+        bytes
+    }
+
+    /// Deserialize packet from bytes
+    /// Expects bytes after SOP and before checksum/EOP
+    pub fn from_bytes(bytes: &[u8]) -> crate::error::Result<Self> {
+        if bytes.len() < 4 {
+            return Err(crate::error::RvrError::Protocol(
+                "Packet too short".to_string()
+            ));
+        }
+
+        let mut pos = 0;
+        let flags = PacketFlags::from_byte(bytes[pos]);
+        pos += 1;
+
+        let target_id = if flags.has_target_id {
+            let id = bytes.get(pos).copied();
+            pos += 1;
+            id
+        } else {
+            None
+        };
+
+        let source_id = if flags.has_source_id {
+            let id = bytes.get(pos).copied();
+            pos += 1;
+            id
+        } else {
+            None
+        };
+
+        if bytes.len() < pos + 3 {
+            return Err(crate::error::RvrError::Protocol(
+                "Packet too short for required fields".to_string()
+            ));
+        }
+
+        let device_id = bytes[pos];
+        pos += 1;
+        let command_id = bytes[pos];
+        pos += 1;
+        let sequence_number = bytes[pos];
+        pos += 1;
+
+        let payload = bytes[pos..].to_vec();
+
+        Ok(Self {
+            flags,
+            target_id,
+            source_id,
+            device_id,
+            command_id,
+            sequence_number,
+            payload,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -144,5 +224,50 @@ mod tests {
         assert!(packet.flags.requests_response);
         assert!(packet.target_id.is_none());
         assert!(packet.source_id.is_none());
+    }
+
+    #[test]
+    fn test_packet_serialization() {
+        let packet = Packet::new_command(0x1A, 0x1C, 5, vec![0x01, 0x02, 0x03]);
+        let bytes = packet.to_bytes();
+
+        // FLAGS | DEVICE | COMMAND | SEQ | PAYLOAD...
+        assert_eq!(bytes[0], packet.flags.to_byte());
+        assert_eq!(bytes[1], 0x1A); // device_id
+        assert_eq!(bytes[2], 0x1C); // command_id
+        assert_eq!(bytes[3], 5); // sequence
+        assert_eq!(&bytes[4..], &[0x01, 0x02, 0x03]); // payload
+    }
+
+    #[test]
+    fn test_packet_deserialization() {
+        let bytes = vec![
+            0b0000_0010, // flags: requests_response=true
+            0x1A,        // device_id
+            0x1C,        // command_id
+            5,           // sequence
+            0x01,
+            0x02,
+            0x03, // payload
+        ];
+
+        let packet = Packet::from_bytes(&bytes).unwrap();
+        assert_eq!(packet.device_id, 0x1A);
+        assert_eq!(packet.command_id, 0x1C);
+        assert_eq!(packet.sequence_number, 5);
+        assert_eq!(packet.payload, vec![0x01, 0x02, 0x03]);
+        assert!(packet.flags.requests_response);
+    }
+
+    #[test]
+    fn test_packet_roundtrip() {
+        let original = Packet::new_command(0x13, 0x0D, 42, vec![0xAA, 0xBB, 0xCC]);
+        let bytes = original.to_bytes();
+        let recovered = Packet::from_bytes(&bytes).unwrap();
+
+        assert_eq!(recovered.device_id, original.device_id);
+        assert_eq!(recovered.command_id, original.command_id);
+        assert_eq!(recovered.sequence_number, original.sequence_number);
+        assert_eq!(recovered.payload, original.payload);
     }
 }

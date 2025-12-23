@@ -40,3 +40,15 @@ strip = true  # Reduce binary size for embedded deployment
 [[example]]
 name = "basic_connection"
 path = "examples/basic_connection.rs"
+
+[[example]]
+name = "led_control"
+path = "examples/led_control.rs"
+
+[[example]]
+name = "battery_status"
+path = "examples/battery_status.rs"
+
+[[example]]
+name = "power_management"
+path = "examples/power_management.rs"

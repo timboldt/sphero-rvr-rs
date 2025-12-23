@@ -30,21 +30,26 @@ The library follows a layered architecture:
 
 ### Implementation Stages
 
-**Stage 1 (Current)**: Baseline project setup
-- Project structure and dependencies
-- Protocol infrastructure
-- Connection management skeleton
-- Basic example
-- Cross-compilation and deployment tooling
+**Stage 1 (Complete)**: Baseline project setup
+- ✅ Project structure and dependencies
+- ✅ Protocol infrastructure (packet encoding, SLIP, checksums)
+- ✅ Connection management
+- ✅ Basic connection example
+- ✅ Cross-compilation and deployment tooling
 
-**Stage 2 (Next)**: Basic messages
-- LED control commands
-- Status information queries
-- Testing with real hardware
+**Stage 2 (Complete)**: LED control and status queries
+- ✅ LED control commands (`set_all_leds`)
+- ✅ Battery status queries (`get_battery_percentage`, `get_battery_voltage_state`)
+- ✅ Power management (`wake`, `sleep`)
+- ✅ Command/response handling with packet serialization
+- ✅ Example programs (led_control, battery_status, power_management)
+- ⏳ Hardware testing (pending physical RVR access)
 
-**Stage 3 (Future)**: Full API implementation
+**Stage 3 (Next)**: Full API implementation
+- Motor control and driving commands
+- Sensor data streaming
 - Complete Sphero RVR API coverage
-- Advanced features (sensors, driving, etc.)
+- Advanced features and optimizations
 
 ## Technical Details
 
@@ -147,14 +152,34 @@ cargo build --target=aarch64-unknown-linux-gnu --release --example basic_connect
 
 ## Common Tasks
 
-### Adding a New Command (Stage 2+)
+### Adding a New Command
 
-1. Define command constants in `src/commands/mod.rs`
-2. Create builder in `src/commands/builder.rs`
-3. Add method to `RvrConnection`
-4. Add response parsing in `src/response.rs`
-5. Create example in `examples/`
-6. Test on hardware
+1. Define device ID and command ID constants in `src/commands/mod.rs`
+   ```rust
+   pub const DEVICE_SYSTEM: u8 = 0x11;
+   pub const CMD_GET_VERSION: u8 = 0x00;
+   ```
+
+2. Add high-level method to `RvrConnection` in `src/connection.rs`
+   ```rust
+   pub async fn get_version(&mut self) -> Result<String> {
+       let seq = self.next_sequence();
+       let packet = Packet::new_command(DEVICE_SYSTEM, CMD_GET_VERSION, seq, vec![]);
+       let response = self.send_command_with_response(packet).await?;
+       // Parse response payload...
+       Ok(version)
+   }
+   ```
+
+3. Create example in `examples/` demonstrating the command
+
+4. Update `Cargo.toml` with new example entry
+
+5. Test locally: `cargo test`
+
+6. Cross-compile: `cargo build --target=aarch64-unknown-linux-gnu --example your_example`
+
+7. Test on hardware: `./deploy.sh --example your_example --run`
 
 ### Debugging Serial Communication
 
