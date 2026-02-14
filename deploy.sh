@@ -84,10 +84,10 @@ fi
 # Build the project
 echo -e "${YELLOW}[2/5] Building project...${NC}"
 if [ "$BUILD_MODE" == "release" ]; then
-    cargo build --target="${TARGET}" --release --example="${EXAMPLE}"
+    cargo zigbuild --target="${TARGET}" --release --example="${EXAMPLE}"
     BINARY_PATH="target/${TARGET}/release/examples/${EXAMPLE}"
 else
-    cargo build --target="${TARGET}" --example="${EXAMPLE}"
+    cargo zigbuild --target="${TARGET}" --example="${EXAMPLE}"
     BINARY_PATH="target/${TARGET}/debug/examples/${EXAMPLE}"
 fi
 

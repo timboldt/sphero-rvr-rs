@@ -12,7 +12,8 @@ categories = ["embedded", "hardware-support"]
 
 [dependencies]
 # Serial communication (blocking I/O)
-serialport = "4.5"
+# Turn off default-features to drop libudev-sys (which creates problems for cross-compilation)
+serialport = { version = "4.5", default-features = false }
 
 # Error handling
 thiserror = "2.0"
