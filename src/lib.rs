@@ -20,16 +20,16 @@
 //! # Examples
 //!
 //! ```no_run
-//! // To be implemented in Phase 3
-//! // use sphero_rvr::SpheroRvr;
-//! //
-//! // fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! //     let mut rvr = SpheroRvr::connect("/dev/serial0")?;
-//! //     rvr.wake()?;
-//! //     rvr.set_all_leds(0, 255, 0)?; // Green
-//! //     rvr.sleep()?;
-//! //     Ok(())
-//! // }
+//! use sphero_rvr::SpheroRvr;
+//! use sphero_rvr::api::types::Color;
+//!
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let mut rvr = SpheroRvr::connect("/dev/serial0")?;
+//!     rvr.wake()?;
+//!     rvr.set_all_leds(Color::GREEN)?;
+//!     rvr.sleep()?;
+//!     Ok(())
+//! }
 //! ```
 
 // Allow unused code during development phases
@@ -45,5 +45,5 @@ pub mod transport;
 // Public API exports
 pub use error::{Result, RvrError};
 
-// High-level client will be exported from api module once implemented
-// pub use api::SpheroRvr;
+// High-level client
+pub use api::SpheroRvr;

@@ -36,3 +36,7 @@ path = "examples/basic_connection.rs"
 [[example]]
 name = "dispatcher_demo"
 path = "examples/dispatcher_demo.rs"
+
+[[example]]
+name = "hello_rvr"
+path = "examples/hello_rvr.rs"
