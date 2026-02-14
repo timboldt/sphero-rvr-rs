@@ -9,6 +9,3 @@
 //! - Runs background RX thread to consume UART buffer
 //! - Routes incoming Acks to waiting callers via oneshot channels
 //! - Pushes async events/sensors to MPSC channels
-//!
-//! To be implemented in Phase 2:
-//! - `dispatcher.rs`: Main dispatcher with thread management

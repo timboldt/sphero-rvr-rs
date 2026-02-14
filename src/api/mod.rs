@@ -5,7 +5,3 @@
 //!
 //! The API layer has zero knowledge of transport details or byte-level
 //! protocol framing. It works purely with high-level commands and responses.
-//!
-//! To be implemented in Phase 3:
-//! - `client.rs`: SpheroRvr client wrapper
-//! - `types.rs`: Command/response types, DeviceIds, CommandIds

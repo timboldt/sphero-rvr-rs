@@ -2,9 +2,6 @@
 //!
 //! Handles escaping of special bytes (SOP, EOP, ESC) within packet payloads
 //! to ensure they aren't confused with framing markers.
-//!
-//! This module survived the async->sync architecture migration (2026-02-14)
-//! and was refactored to remove the `bytes` crate dependency.
 
 use crate::error::{Result, RvrError};
 
