@@ -1,5 +1,12 @@
+//! SLIP-style byte framing for Sphero RVR protocol
+//!
+//! Handles escaping of special bytes (SOP, EOP, ESC) within packet payloads
+//! to ensure they aren't confused with framing markers.
+//!
+//! This module survived the async->sync architecture migration (2026-02-14)
+//! and was refactored to remove the `bytes` crate dependency.
+
 use crate::error::{Result, RvrError};
-use bytes::{BufMut, BytesMut};
 
 // Protocol constants
 pub const SOP: u8 = 0x8D;
@@ -12,15 +19,15 @@ pub const ESC_MASK: u8 = 0x88;
 /// Special bytes (ESC, SOP, EOP) are escaped:
 /// - ESC -> ESC (original_byte & !ESC_MASK)
 /// - Original value = escaped_value | ESC_MASK
-pub fn encode_bytes(data: &[u8]) -> BytesMut {
-    let mut encoded = BytesMut::with_capacity(data.len() * 2);
+pub fn encode_bytes(data: &[u8]) -> Vec<u8> {
+    let mut encoded = Vec::with_capacity(data.len() * 2);
 
     for &byte in data {
         if byte == ESC || byte == SOP || byte == EOP {
-            encoded.put_u8(ESC);
-            encoded.put_u8(byte & !ESC_MASK);
+            encoded.push(ESC);
+            encoded.push(byte & !ESC_MASK);
         } else {
-            encoded.put_u8(byte);
+            encoded.push(byte);
         }
     }
 
@@ -54,28 +61,28 @@ mod tests {
     fn test_encode_no_special_bytes() {
         let data = vec![0x01, 0x02, 0x03];
         let encoded = encode_bytes(&data);
-        assert_eq!(encoded.as_ref(), &data[..]);
+        assert_eq!(encoded, data);
     }
 
     #[test]
     fn test_encode_with_escape() {
         let data = vec![0xAB]; // ESC byte
         let encoded = encode_bytes(&data);
-        assert_eq!(encoded.as_ref(), &[ESC, 0xAB & !ESC_MASK]);
+        assert_eq!(encoded, vec![ESC, 0xAB & !ESC_MASK]);
     }
 
     #[test]
     fn test_encode_with_sop() {
         let data = vec![0x8D]; // SOP byte
         let encoded = encode_bytes(&data);
-        assert_eq!(encoded.as_ref(), &[ESC, 0x8D & !ESC_MASK]);
+        assert_eq!(encoded, vec![ESC, 0x8D & !ESC_MASK]);
     }
 
     #[test]
     fn test_encode_with_eop() {
         let data = vec![0xD8]; // EOP byte
         let encoded = encode_bytes(&data);
-        assert_eq!(encoded.as_ref(), &[ESC, 0xD8 & !ESC_MASK]);
+        assert_eq!(encoded, vec![ESC, 0xD8 & !ESC_MASK]);
     }
 
     #[test]

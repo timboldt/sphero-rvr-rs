@@ -1,20 +1,42 @@
-//! Basic connection example
+//! Basic connection example (PLACEHOLDER - to be implemented in Phase 3)
 //!
-//! Demonstrates:
+//! This example will demonstrate:
 //! - Opening a serial connection to RVR
-//! - Configuring connection parameters
+//! - Sending basic commands
 //! - Graceful shutdown
 //!
-//! Usage:
+//! Usage (once implemented):
 //!   cargo run --example basic_connection
 //!
 //! On Raspberry Pi (after deployment):
 //!   ./basic_connection
 
-use sphero_rvr::{Result, RvrConfig, RvrConnection};
+// This is a placeholder example that will be implemented in Phase 3
+// after the SpheroRvr client API is built.
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() {
+    println!("Basic connection example - to be implemented in Phase 3");
+    println!();
+    println!("The new synchronous API will look like:");
+    println!();
+    println!("  use sphero_rvr::SpheroRvr;");
+    println!();
+    println!("  fn main() -> Result<(), Box<dyn std::error::Error>> {{");
+    println!("      let mut rvr = SpheroRvr::connect(\"/dev/serial0\")?;");
+    println!("      rvr.wake()?;");
+    println!("      rvr.set_all_leds(0, 255, 0)?; // Green");
+    println!("      rvr.sleep()?;");
+    println!("      Ok(())");
+    println!("  }}");
+    println!();
+    println!("See CLAUDE.md for implementation phases and architecture details.");
+}
+
+// Future implementation will use the synchronous API:
+/*
+use sphero_rvr::{Result, SpheroRvr};
+
+fn main() -> Result<()> {
     // Initialize logging
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -25,10 +47,6 @@ async fn main() -> Result<()> {
 
     tracing::info!("Sphero RVR Basic Connection Example");
 
-    // Configure connection
-    let config = RvrConfig::default();
-    tracing::info!("Using configuration: {:?}", config);
-
     // Determine serial port based on platform
     let port = if cfg!(target_os = "linux") {
         "/dev/serial0" // Raspberry Pi UART
@@ -38,28 +56,23 @@ async fn main() -> Result<()> {
 
     tracing::info!("Attempting to connect to RVR on {}", port);
 
-    // Open connection
-    match RvrConnection::open(port, config).await {
-        Ok(rvr) => {
-            tracing::info!("Successfully connected to RVR!");
+    // Open connection (synchronous)
+    let mut rvr = SpheroRvr::connect(port)?;
+    tracing::info!("Successfully connected to RVR!");
 
-            // Stage 2 will add:
-            // - Sending a ping/wake command
-            // - Reading firmware version
-            // - LED blink test
+    // Wake the robot
+    rvr.wake()?;
 
-            // Keep connection open briefly
-            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+    // Set LEDs to green
+    rvr.set_all_leds(0, 255, 0)?;
 
-            // Graceful shutdown
-            rvr.close().await?;
-            tracing::info!("Connection closed successfully");
-        }
-        Err(e) => {
-            tracing::error!("Failed to connect to RVR: {}", e);
-            return Err(e);
-        }
-    }
+    // Sleep for a moment
+    std::thread::sleep(std::time::Duration::from_secs(2));
 
+    // Put robot to sleep
+    rvr.sleep()?;
+
+    tracing::info!("Connection closed successfully");
     Ok(())
 }
+*/

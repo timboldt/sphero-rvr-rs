@@ -4,29 +4,27 @@ Rust library for controlling Sphero RVR robots via UART serial communication fro
 
 ## Features
 
-- **Async-first design** using Tokio runtime
-- **Type-safe API** leveraging Rust's type system
-- **Cross-compilation support** for Raspberry Pi
-- **Protocol abstraction** - clean high-level API hiding protocol details
-- **Comprehensive error handling** with domain-specific error types
+- **Synchronous, thread-safe API** that abstracts away asynchronous hardware complexity
+- **Multi-threaded dispatcher** handling full-duplex UART communication in the background
+- **Type-safe commands** leveraging Rust's type system for hardware domains
+- **Cross-compilation support** for `aarch64` (Raspberry Pi)
 
-## Current Status: Stage 1 (Baseline Setup)
+## Current Status
 
-Stage 1 provides the foundational infrastructure:
-- ✅ Complete project structure and build configuration
-- ✅ Protocol layer (packet encoding, SLIP encoding, checksums)
-- ✅ Connection management
-- ✅ Cross-compilation and deployment automation
-- ✅ Basic connection example
+**Phase 1: Core Domain & Protocol (In Progress)**
+- Protocol layer (packet encoding, SLIP escaping, checksums)
+- API vocabulary and data structures
 
-**Coming in Stage 2:**
-- LED control commands
-- Status information queries
-- Hardware testing
+**Phase 2: Dispatcher (Upcoming)**
+- Background RX thread and MPSC channel routing
+- UART connection management
 
-**Coming in Stage 3:**
-- Complete Sphero RVR API implementation
-- Sensor data, motor control, etc.
+**Phase 3: High-Level API (Upcoming)**
+- Synchronous client wrapper
+- Commands: Wake, Sleep, Set LEDs, Drive
+
+**Phase 4: Hardware Validation (Upcoming)**
+- Cross-compilation and physical hardware testing
 
 ## Quick Start
 
@@ -87,37 +85,43 @@ cargo build --target=aarch64-unknown-linux-gnu --release --example basic_connect
 ### Usage Example
 
 ```rust
-use sphero_rvr::{RvrConnection, RvrConfig};
+use sphero_rvr::{api::SpheroRvr, transport::Dispatcher};
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Configure connection
-    let config = RvrConfig::default();
+fn main() -> Result<(), String> {
+    // 1. Open the physical serial port
+    let port = serialport::new("/dev/serial0", 115_200)
+        .timeout(std::time::Duration::from_millis(10))
+        .open()
+        .map_err(|e| e.to_string())?;
 
-    // Open connection to RVR
-    let mut rvr = RvrConnection::open("/dev/serial0", config).await?;
+    // 2. Initialize the dispatcher and background threads
+    let dispatcher = Dispatcher::new(port);
+    
+    // 3. Instantiate the synchronous API client
+    let mut rvr = SpheroRvr::new(dispatcher);
 
-    // Stage 2 will add commands like:
-    // rvr.set_led_color(255, 0, 0).await?;
-    // let battery = rvr.get_battery_percentage().await?;
+    // 4. Send synchronous commands
+    rvr.wake()?;
+    rvr.set_all_leds(0, 255, 0)?; // Set LEDs green
+    
+    std::thread::sleep(std::time::Duration::from_secs(2));
+    
+    rvr.sleep()?;
 
-    // Close connection
-    rvr.close().await?;
     Ok(())
 }
-```
 
 ## Hardware Setup
 
 ### Wiring RVR to Raspberry Pi
 
-Connect the RVR's UART to the Raspberry Pi GPIO pins:
+Connect the RVR's UART expansion port to the Raspberry Pi GPIO pins:
 
-- **Pi TX (GPIO 14)** → **RVR RX**
-- **Pi RX (GPIO 15)** → **RVR TX**
-- **Pi GND** → **RVR GND**
+- **Pi TX (GPIO 14 / Pin 8)** → **RVR RX**
+- **Pi RX (GPIO 15 / Pin 10)** → **RVR TX**
+- **Pi GND (Pin 6)** → **RVR GND**
 
-**⚠️ WARNING**: The RVR operates at 3.3V. Do NOT connect 5V to the RVR or you may damage it!
+**⚠️ WARNING**: The RVR UART logic level is strictly 3.3V. Do NOT connect 5V to the RVR data lines or you will damage the board!
 
 ### Serial Port
 
@@ -139,11 +143,18 @@ For detailed development information, architecture details, and troubleshooting,
 
 ### Project Structure
 
+### Project Structure
+
 - `src/` - Library source code
-  - `protocol/` - Low-level packet handling
-  - `commands/` - Command builders
-  - `connection.rs` - Serial connection management
-  - `error.rs` - Error types
+  - `api/` - High-level, synchronous API
+    - `client.rs` - `SpheroRvr` wrapper and domain methods
+    - `types.rs` - Strongly typed commands, responses, and IDs
+  - `transport/` - Hardware abstraction and concurrency
+    - `dispatcher.rs` - Background TX/RX threads and MPSC routing
+  - `protocol/` - Pure state machines and byte manipulation
+    - `parser.rs` - `SpheroParser` state machine for incoming frames
+    - `framing.rs` - SLIP-style byte escaping and unescaping
+    - `checksum.rs` - Modulo 256 bitwise NOT calculations
 - `examples/` - Example programs
 - `deploy.sh` - Cross-compilation and deployment script
 - `.cargo/config.toml` - Cross-compilation configuration

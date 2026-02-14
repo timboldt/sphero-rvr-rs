@@ -2,231 +2,123 @@
 
 ## Project Overview
 
-This is a Rust library for controlling Sphero RVR robots via UART serial communication, specifically designed for Raspberry Pi 3B+ (but portable to other platforms).
+This is a Rust Hardware Abstraction Layer (HAL) for controlling Sphero RVR robots via UART serial communication. It is designed for Linux environments (specifically Raspberry Pi) and prioritizes a clean, synchronous high-level API backed by a robust, multi-threaded hardware dispatcher.
 
 ### Architecture
 
-The library follows a layered architecture:
+The library explicitly avoids heavy async runtimes to maintain predictable execution and clean API boundaries. It uses standard library threads and channels to bridge the full-duplex asynchronous serial line to a synchronous application interface.
 
-1. **Protocol Layer** (`src/protocol/`): Low-level packet handling
-   - Packet structure (SOP, flags, IDs, payload, checksum, EOP)
-   - SLIP-style encoding/decoding for special characters
-   - Checksum calculation and verification
+1. **API Layer** (`src/api/`): High-level, synchronous interface
+   - Strongly typed structs and enums for domains (Drive, Power, UserIo).
+   - Zero knowledge of transport or byte-level framing.
+   - Blocks on oneshot channels waiting for specific Ack sequences.
 
-2. **Connection Layer** (`src/connection.rs`): Serial port management
-   - Async I/O using tokio-serial
-   - Sequence number tracking
-   - Connection lifecycle management
+2. **Dispatcher Layer** (`src/transport/`): Concurrency and routing
+   - Owns the physical serial port (`serialport` crate).
+   - Manages sequence IDs and a `HashMap` of pending requests.
+   - Runs a background RX thread to constantly consume the UART buffer.
+   - Routes incoming Acks to waiting callers and pushes asynchronous events/sensors to dedicated MPSC channels.
 
-3. **Command Layer** (`src/commands/`): High-level API
-   - Command builder pattern
-   - Type-safe command construction
-   - Stage 2+: LED control, status queries, etc.
+3. **Protocol Layer** (`src/protocol/`): Pure state machines
+   - `SpheroParser`: Feeds on raw bytes, handles SOP/EOP detection.
+   - Implements SLIP-style encoding/decoding for special characters.
+   - Handles checksum calculation and verification.
 
-4. **Response Layer** (`src/response.rs`): Response parsing
-   - Packet-to-response conversion
-   - Error code handling
-   - Success/failure determination
+### Implementation Phases
 
-### Implementation Stages
+**Phase 1**: Core Domain and Protocol Definitions
+- Define API vocabulary (Device IDs, Command IDs).
+- Implement byte-escaping and checksum rules.
+- Build the `SpheroParser` state machine.
 
-**Stage 1 (Current)**: Baseline project setup
-- Project structure and dependencies
-- Protocol infrastructure
-- Connection management skeleton
-- Basic example
-- Cross-compilation and deployment tooling
+**Phase 2**: The Dispatcher (HAL)
+- Implement `Dispatcher` thread management and sequence tracking.
+- Build the RX deserialization loop.
 
-**Stage 2 (Next)**: Basic messages
-- LED control commands
-- Status information queries
-- Testing with real hardware
+**Phase 3**: High-Level API Implementation
+- Implement the `SpheroRvr` client wrapper.
+- Add baseline commands: Wake, Sleep, Set LEDs.
 
-**Stage 3 (Future)**: Full API implementation
-- Complete Sphero RVR API coverage
-- Advanced features (sensors, driving, etc.)
+**Phase 4**: Hardware Validation
+- Cross-compile for aarch64.
+- Validate the "Hello World" (Wake -> Green LEDs) on real hardware.
 
 ## Technical Details
 
 ### Sphero RVR Protocol
 
-Based on Sphero SDK documentation:
-
 **Packet Structure:**
-```
-[SOP] [FLAGS] [TARGET_ID?] [SOURCE_ID?] [DEVICE_ID] [COMMAND_ID] [SEQ] [PAYLOAD...] [CHECKSUM] [EOP]
-```
+`[SOP] [FLAGS] [TARGET_ID] [SOURCE_ID] [DEVICE_ID] [COMMAND_ID] [SEQ] [PAYLOAD...] [CHECKSUM] [EOP]`
 
 **Key Specifications:**
 - Baud rate: 115200
+- Parity: None, 8 Data bits, 1 Stop bit.
 - Voltage: 3.3V (NOT 5V tolerant!)
-- Encoding: SLIP-style with ESC sequences
-- Checksum: `0xFF - (sum of bytes & 0xFF)`
-- Byte order: Big-endian
+- Checksum: Modulo 256 bitwise NOT (`!sum(bytes) & 0xFF`)
 
 **SLIP Encoding:**
-- Special bytes (0x8D, 0xD8, 0xAB) are escaped
-- Escape sequence: ESC (0xAB) followed by `(byte & !0x88)`
-- Decode: `escaped_byte | 0x88`
+- The protocol escapes specific byte values within the payload to ensure they aren't confused with framing bytes.
+- Special bytes (0xAB, 0x8D, 0x8E) are escaped.
+- Escape sequence: ESC (0xAB) followed by `(byte & !0x88)`.
+- Decode: `escaped_byte | 0x88`.
 
 ### Cross-Compilation Setup
 
-**Target**: aarch64-unknown-linux-gnu (Raspberry Pi 64-bit)
+**Target**: `aarch64-unknown-linux-gnu` (Raspberry Pi 64-bit)
 
 **Requirements:**
 1. Install target: `rustup target add aarch64-unknown-linux-gnu`
 2. Install ARM toolchain: `sudo apt install gcc-aarch64-linux-gnu`
-3. Configure linker in `.cargo/config.toml`
+3. If using `serialport`, you may need `pkg-config` and `libudev-dev` configured for the target architecture.
 
 **Build Commands:**
-```bash
-# Debug build
-cargo build --target=aarch64-unknown-linux-gnu --example basic_connection
-
-# Release build
-cargo build --target=aarch64-unknown-linux-gnu --release --example basic_connection
-```
-
-**Deployment:**
-```bash
-# Deploy and run
-./deploy.sh --example basic_connection --run
-
-# Custom Pi host
-./deploy.sh --pi-host 192.168.1.100 --example basic_connection
-```
-
-### Development Workflow
-
-1. **Write code** on development machine
-2. **Test** with unit tests: `cargo test`
-3. **Build** for ARM: `cargo build --target=aarch64-unknown-linux-gnu`
-4. **Deploy** to Pi: `./deploy.sh --example basic_connection`
-5. **Test** on hardware via SSH
+`cargo build --target=aarch64-unknown-linux-gnu --release --example basic_connection`
 
 ### Raspberry Pi UART Setup
 
 **Enable UART on Pi:**
 1. Edit `/boot/config.txt`:
-   ```
+   ```text
    enable_uart=1
    dtoverlay=disable-bt
    ```
-2. Reboot
-3. UART available on GPIO 14 (TX) and GPIO 15 (RX)
-4. Serial device: `/dev/serial0`
+2. Reboot. UART is available on GPIO 14 (TX) and GPIO 15 (RX).
+3. Serial device is typically `/dev/serial0` or `/dev/ttyS0`.
 
 **Wiring:**
 - Pi TX (GPIO 14) → RVR RX
 - Pi RX (GPIO 15) → RVR TX
 - Pi GND → RVR GND
-- **WARNING**: RVR is 3.3V - do NOT connect 5V!
 
 ### Dependencies
 
-- **tokio**: Async runtime (full features for flexibility)
-- **tokio-serial**: Async serial port I/O
-- **thiserror**: Error handling with derive macros
-- **bytes**: Efficient byte buffer manipulation
-- **tracing**: Structured logging for async code
-
-### Testing Strategy
-
-**Unit Tests:**
-- Protocol encoding/decoding
-- Checksum calculation
-- Packet construction
-
-**Integration Tests:**
-- Mock serial port for command/response cycle
-- Sequence number handling
-
-**Hardware Tests:**
-- Examples serve as hardware integration tests
-- Verify on real RVR hardware
-
-## Common Tasks
-
-### Adding a New Command (Stage 2+)
-
-1. Define command constants in `src/commands/mod.rs`
-2. Create builder in `src/commands/builder.rs`
-3. Add method to `RvrConnection`
-4. Add response parsing in `src/response.rs`
-5. Create example in `examples/`
-6. Test on hardware
-
-### Debugging Serial Communication
-
-Enable debug logging:
-```bash
-RUST_LOG=debug ./basic_connection
-```
-
-Use `stty` to verify UART settings:
-```bash
-stty -F /dev/serial0
-```
-
-### Troubleshooting
-
-**"Permission denied" on /dev/serial0:**
-```bash
-sudo usermod -a -G dialout $USER
-# Logout and login again
-```
-
-**Cross-compilation linker errors:**
-```bash
-sudo apt install gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
-```
-
-**SSH connection timeout:**
-- Verify Pi is on network: `ping raspberrypi.local`
-- Check SSH enabled: `sudo raspi-config` → Interface Options → SSH
+- **serialport**: Blocking serial port access.
+- **bitflags**: Ergonomic bitmasking for sensor selection.
+- **crossbeam-channel** (Optional): If you prefer it over `std::sync::mpsc` for the MPMC sensor streaming.
+- **log** / **env_logger**: For hex-dumping frames during protocol debugging.
 
 ## Project Structure
 
-```
+```text
 sphero-rvr-rs/
 ├── .cargo/
-│   └── config.toml          # Cross-compilation configuration
-├── .gitignore               # Rust-specific ignores
-├── Cargo.toml               # Project manifest and dependencies
-├── claude.md                # This file
-├── README.md                # User-facing documentation
-├── deploy.sh                # Cross-compile and deployment script
+│   └── config.toml          
+├── Cargo.toml               
+├── DEVELOPMENT.md           # This file
 ├── src/
-│   ├── lib.rs              # Library root, public API exports
-│   ├── connection.rs       # Serial connection management
-│   ├── protocol/
-│   │   ├── mod.rs          # Protocol module root
-│   │   ├── packet.rs       # Packet structure and parsing
-│   │   ├── encoding.rs     # SLIP-style encoding/decoding
-│   │   └── checksum.rs     # Checksum calculation
-│   ├── commands/
-│   │   ├── mod.rs          # Commands module root
-│   │   └── builder.rs      # Command builder pattern
-│   ├── response.rs         # Response types and parsing
-│   └── error.rs            # Error types
+│   ├── lib.rs              
+│   ├── api/
+│   │   ├── mod.rs          
+│   │   ├── client.rs        # SpheroRvr high-level wrapper
+│   │   └── types.rs         # Commands, Responses, DeviceIds
+│   ├── transport/
+│   │   ├── mod.rs          
+│   │   └── dispatcher.rs    # Thread management, TX/RX loops, MPSC routing
+│   └── protocol/
+│   │   ├── mod.rs          
+│   │   ├── parser.rs        # SpheroParser state machine
+│   │   ├── framing.rs       # SLIP-style escaping
+│   │   └── checksum.rs      
 └── examples/
-    └── basic_connection.rs  # Example: Connect and validate communication
+    └── hello_rvr.rs         # Wake, set LEDs, sleep
 ```
-
-## References
-
-- [Sphero SDK Documentation](https://sdk.sphero.com/)
-- [Sphero API Documents](https://sdk.sphero.com/documentation/api-documents)
-- [tokio-serial Documentation](https://docs.rs/tokio-serial)
-- [Cross-Compilation Guide](https://chacin.dev/blog/cross-compiling-rust-for-the-raspberry-pi/)
-
-## Future Enhancements
-
-- [ ] Async response handling with background task
-- [ ] Command timeout and retry logic
-- [ ] Connection health monitoring (ping/keepalive)
-- [ ] Sensor data streaming
-- [ ] Motor control API
-- [ ] Configuration file support (TOML)
-- [ ] CLI tool for interactive control
-- [ ] Web API for remote control (future stage)
