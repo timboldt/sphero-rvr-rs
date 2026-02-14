@@ -34,16 +34,17 @@ fn main() -> Result<()> {
         flags: PacketFlags {
             is_response: false,
             requests_response: true,
+            requests_only_error_response: false,
             is_activity: false,
-            has_target_id: false,
-            has_source_id: false,
+            has_target_id: true,  // Required for UART routing
+            has_source_id: true,  // Required for UART routing
             reserved: 0,
         },
-        target_id: None,
-        source_id: None,
-        device_id: 0x13,    // Power device
-        command_id: 0x0D,   // Wake command
-        sequence_number: 0, // Will be assigned by dispatcher
+        target_id: Some(0x01),    // Primary processor (Nordic MCU)
+        source_id: Some(0x02),    // UART expansion port
+        device_id: 0x13,          // Power device
+        command_id: 0x0D,         // Wake command
+        sequence_number: 0,       // Will be assigned by dispatcher
         payload: vec![],
     };
 
@@ -68,16 +69,17 @@ fn main() -> Result<()> {
         flags: PacketFlags {
             is_response: false,
             requests_response: true,
+            requests_only_error_response: false,
             is_activity: false,
-            has_target_id: false,
-            has_source_id: false,
+            has_target_id: true,  // Required for UART routing
+            has_source_id: true,  // Required for UART routing
             reserved: 0,
         },
-        target_id: None,
-        source_id: None,
-        device_id: 0x1A,    // IO device
-        command_id: 0x1A,   // Set all LEDs command
-        sequence_number: 0, // Will be assigned
+        target_id: Some(0x01),    // Primary processor (Nordic MCU)
+        source_id: Some(0x02),    // UART expansion port
+        device_id: 0x1A,          // IO device
+        command_id: 0x1A,         // Set all LEDs command
+        sequence_number: 0,       // Will be assigned
         payload: vec![
             0x3F, // LED bitmask (all LEDs)
             0x00, // Red: 0
@@ -132,15 +134,16 @@ fn main() -> Result<()> {
         flags: PacketFlags {
             is_response: false,
             requests_response: true,
+            requests_only_error_response: false,
             is_activity: false,
-            has_target_id: false,
-            has_source_id: false,
+            has_target_id: true,  // Required for UART routing
+            has_source_id: true,  // Required for UART routing
             reserved: 0,
         },
-        target_id: None,
-        source_id: None,
-        device_id: 0x13,  // Power device
-        command_id: 0x01, // Sleep command
+        target_id: Some(0x01),    // Primary processor (Nordic MCU)
+        source_id: Some(0x02),    // UART expansion port
+        device_id: 0x13,          // Power device
+        command_id: 0x01,         // Sleep command
         sequence_number: 0,
         payload: vec![],
     };

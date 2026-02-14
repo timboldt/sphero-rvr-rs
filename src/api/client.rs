@@ -284,6 +284,7 @@ impl SpheroRvr {
             flags: PacketFlags {
                 is_response: false,
                 requests_response: true,
+                requests_only_error_response: false,
                 is_activity: false,
                 has_target_id: true, // Required for UART routing
                 has_source_id: true, // Required for UART routing
@@ -382,6 +383,7 @@ mod tests {
             flags: PacketFlags {
                 is_response: true,
                 requests_response: false,
+                requests_only_error_response: false,
                 is_activity: false,
                 has_target_id: false,
                 has_source_id: false,
@@ -421,6 +423,7 @@ mod tests {
             flags: PacketFlags {
                 is_response: true,
                 requests_response: false,
+                requests_only_error_response: false,
                 is_activity: false,
                 has_target_id: false,
                 has_source_id: false,

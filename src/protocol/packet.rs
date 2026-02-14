@@ -6,6 +6,7 @@ use crate::protocol::checksum::calculate_checksum;
 pub struct PacketFlags {
     pub is_response: bool,
     pub requests_response: bool,
+    pub requests_only_error_response: bool,
     pub is_activity: bool,
     pub has_target_id: bool,
     pub has_source_id: bool,
@@ -17,33 +18,37 @@ impl PacketFlags {
     pub fn to_byte(self) -> u8 {
         let mut byte = 0u8;
         if self.is_response {
-            byte |= 0b0000_0001;
+            byte |= 0b0000_0001; // bit 0
         }
         if self.requests_response {
-            byte |= 0b0000_0010;
+            byte |= 0b0000_0010; // bit 1
+        }
+        if self.requests_only_error_response {
+            byte |= 0b0000_0100; // bit 2
         }
         if self.is_activity {
-            byte |= 0b0000_0100;
+            byte |= 0b0000_1000; // bit 3
         }
         if self.has_target_id {
-            byte |= 0b0000_1000;
+            byte |= 0b0001_0000; // bit 4
         }
         if self.has_source_id {
-            byte |= 0b0001_0000;
+            byte |= 0b0010_0000; // bit 5
         }
-        byte |= (self.reserved & 0b111) << 5;
+        byte |= (self.reserved & 0b11) << 6; // bits 6-7
         byte
     }
 
     /// Create flags from a byte
     pub fn from_byte(byte: u8) -> Self {
         Self {
-            is_response: byte & 0b0000_0001 != 0,
-            requests_response: byte & 0b0000_0010 != 0,
-            is_activity: byte & 0b0000_0100 != 0,
-            has_target_id: byte & 0b0000_1000 != 0,
-            has_source_id: byte & 0b0001_0000 != 0,
-            reserved: (byte >> 5) & 0b111,
+            is_response: byte & 0b0000_0001 != 0,                 // bit 0
+            requests_response: byte & 0b0000_0010 != 0,           // bit 1
+            requests_only_error_response: byte & 0b0000_0100 != 0, // bit 2
+            is_activity: byte & 0b0000_1000 != 0,                 // bit 3
+            has_target_id: byte & 0b0001_0000 != 0,               // bit 4
+            has_source_id: byte & 0b0010_0000 != 0,               // bit 5
+            reserved: (byte >> 6) & 0b11,                         // bits 6-7
         }
     }
 }
@@ -72,6 +77,7 @@ impl Packet {
             flags: PacketFlags {
                 is_response: false,
                 requests_response: true,
+                requests_only_error_response: false,
                 is_activity: false,
                 has_target_id: false,
                 has_source_id: false,
@@ -221,13 +227,14 @@ mod tests {
         let flags = PacketFlags {
             is_response: true,
             requests_response: false,
+            requests_only_error_response: false,
             is_activity: true,
             has_target_id: false,
             has_source_id: false,
             reserved: 0,
         };
         let byte = flags.to_byte();
-        assert_eq!(byte, 0b0000_0101); // bits 0 and 2 set
+        assert_eq!(byte, 0b0000_1001); // bits 0 and 3 set
     }
 
     #[test]
@@ -236,7 +243,8 @@ mod tests {
         let flags = PacketFlags::from_byte(byte);
         assert!(!flags.is_response);
         assert!(flags.requests_response);
-        assert!(flags.is_activity);
+        assert!(flags.requests_only_error_response);
+        assert!(!flags.is_activity);
         assert!(!flags.has_target_id);
         assert!(!flags.has_source_id);
     }
@@ -246,10 +254,11 @@ mod tests {
         let original = PacketFlags {
             is_response: true,
             requests_response: true,
+            requests_only_error_response: false,
             is_activity: false,
             has_target_id: true,
             has_source_id: false,
-            reserved: 0b101,
+            reserved: 0b01, // Only 2 bits available now (bits 6-7)
         };
         let byte = original.to_byte();
         let recovered = PacketFlags::from_byte(byte);
