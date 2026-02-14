@@ -9,3 +9,8 @@
 //! - Runs background RX thread to consume UART buffer
 //! - Routes incoming Acks to waiting callers via oneshot channels
 //! - Pushes async events/sensors to MPSC channels
+
+pub mod dispatcher;
+
+// Re-export commonly used items
+pub use dispatcher::Dispatcher;

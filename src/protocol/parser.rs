@@ -27,12 +27,13 @@ enum ParserState {
 ///
 /// # Example
 ///
-/// ```
+/// ```no_run
 /// use sphero_rvr::protocol::parser::SpheroParser;
 ///
 /// let mut parser = SpheroParser::new();
 ///
 /// // Feed bytes one at a time from UART
+/// # let uart_stream: Vec<u8> = vec![];
 /// for byte in uart_stream {
 ///     match parser.feed(byte) {
 ///         Ok(Some(packet)) => {

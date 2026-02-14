@@ -32,3 +32,7 @@ strip = true  # Reduce binary size for embedded deployment
 [[example]]
 name = "basic_connection"
 path = "examples/basic_connection.rs"
+
+[[example]]
+name = "dispatcher_demo"
+path = "examples/dispatcher_demo.rs"
