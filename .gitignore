@@ -26,3 +26,5 @@ deploy_key*
 
 # Debug logs
 *.log
+
+OLD/

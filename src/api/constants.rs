@@ -16,7 +16,7 @@ pub mod routing_node {
     pub const UART_PORT: u8 = 0x02;
 }
 
-/// Device ID for the Power subsystem
+/// Device IDs for RVR subsystems
 pub mod device {
     /// Power device - controls wake, sleep, battery status
     pub const POWER: u8 = 0x13;
